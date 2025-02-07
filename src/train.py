@@ -62,6 +62,9 @@ def train(args, model):
 
             total_loss /= len(test_loader)
             writer.add_scalar("test_loss", total_loss, train_step)
+            writer.add_images("test_x", x, train_step)
+            writer.add_images("test_y", y, train_step)
+            writer.add_images("test_pred", pred, train_step)
 
         torch.save(model.state_dict(), "model.pt")
 
@@ -69,14 +72,18 @@ def train(args, model):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, required=True, help="Path to the dataset directory.")
+    parser.add_argument("--resume", type=Path, help="Model file to resume from.")
     parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--epochs", type=int, default=10)
-    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--lr", type=float, default=1e-4)
     args = parser.parse_args()
 
     print("Training on device", DEVICE)
 
     model = ReducedUNet().to(DEVICE)
+    if args.resume is not None:
+        print("Resuming from", args.resume)
+        model.load_state_dict(torch.load(args.resume, map_location=DEVICE))
 
     train(args, model)
 
