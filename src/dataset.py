@@ -20,6 +20,13 @@ VALID_BLOCKS = (
     (2, 3),
     (3, 3),
 )
+OUTPUT_RES = 512
+
+VALID_EXTENSIONS = (
+    ".png",
+    ".jpg",
+    ".jpeg",
+)
 
 
 class OistDataset(Dataset):
@@ -37,23 +44,24 @@ class OistDataset(Dataset):
         assert (self.dir / "frames_txt").is_dir()
 
         self.files = list((self.dir / "frames").iterdir())
+        self.files = [f for f in self.files if f.suffix in VALID_EXTENSIONS]
+
+        self.resize = T.Resize((OUTPUT_RES, OUTPUT_RES))
+        self.blur = T.GaussianBlur(5)
 
     def __len__(self):
         return len(self.files) * len(VALID_BLOCKS)
 
-    def __getitem__(self, idx, y_as_img=True):
+    def __getitem__(self, idx):
         """
         return (x, y)
 
         x is image.
             Tensor shape (1, BLOCK_SIZE, BLOCK_SIZE), dtype uint8
 
-        if y_as_img:
-            y is an image same shape and dtype as x.
-            Ellipses are drawn at a color value of 255,
-                corresponding to the body of the bees, as described in the paper.
-        else:
-            y is list of bees present. Each bee is a tuple (x: int, y: int, angle: float).
+        y is an image same shape and dtype as x.
+        Ellipses are drawn at a color value of 255,
+            corresponding to the body of the bees, as described in the paper.
         """
         file_idx = idx // len(VALID_BLOCKS)
         block_x, block_y = VALID_BLOCKS[file_idx % len(VALID_BLOCKS)]
@@ -63,6 +71,7 @@ class OistDataset(Dataset):
         max_y = min_y + BLOCK_SIZE
 
         img = read_image(str(self.files[file_idx]))[..., min_y:max_y, min_x:max_x]
+
         label_path = (self.dir / "frames_txt" / self.files[file_idx].stem).with_suffix(".txt")
         labels = []
         for label in OistDataset.read_label(label_path):
@@ -71,16 +80,15 @@ class OistDataset(Dataset):
                     and label[0] == 1):
                 labels.append((label[1] - min_x, label[2] - min_y, label[3]))
 
-        if y_as_img:
-            y_img = np.zeros((img.shape[1], img.shape[2], 1), dtype=np.uint8)
-            for x, y, angle in labels:
-                # TODO some angle is wrong
-                angle = angle * 180 / math.pi + 90
-                cv2.ellipse(y_img, (x, y), (35, 20), angle, 0, 360, 255, -1)
-            y_img = torch.from_numpy(y_img).permute(2, 0, 1)
-            return img, y_img
-        else:
-            return img, labels
+        y_img = np.zeros((img.shape[1], img.shape[2], 1), dtype=np.uint8)
+        for x, y, angle in labels:
+            angle = angle * 180 / math.pi + 90
+            cv2.ellipse(y_img, (x, y), (35, 20), angle, 0, 360, 255, -1)
+        y_img = torch.from_numpy(y_img).permute(2, 0, 1)
+
+        img = self.resize(img)
+        y_img = self.blur(self.resize(y_img))
+        return img, y_img
 
     @staticmethod
     def read_label(path):

@@ -16,35 +16,55 @@ class ReducedUNet(nn.Module):
         # Naming: left/right (which side of the U-Net), 1/2/3 (layer)
         self.left1 = nn.Sequential(
             nn.Conv2d(1, 32, 3, padding=1),
+            nn.LeakyReLU(),
             nn.Conv2d(32, 32, 3, padding=1),
+            nn.LeakyReLU(),
         )
         self.left2 = nn.Sequential(
             nn.MaxPool2d(2),
             nn.Conv2d(32, 64, 3, padding=1),
+            nn.LeakyReLU(),
             nn.Conv2d(64, 64, 3, padding=1),
+            nn.LeakyReLU(),
         )
         self.left3 = nn.Sequential(
             nn.MaxPool2d(2),
             nn.Conv2d(64, 128, 3, padding=1),
+            nn.LeakyReLU(),
             nn.Conv2d(128, 128, 3, padding=1),
+            nn.LeakyReLU(),
         )
         self.left4 = nn.Sequential(
             nn.MaxPool2d(2),
             nn.Conv2d(128, 256, 3, padding=1),
+            nn.LeakyReLU(),
             nn.Conv2d(256, 256, 3, padding=1),
+            nn.LeakyReLU(),
         )
         self.right3 = nn.Sequential(
             nn.Conv2d(128+256, 128, 3, padding=1),
+            nn.LeakyReLU(),
             nn.Conv2d(128, 128, 3, padding=1),
+            nn.LeakyReLU(),
         )
         self.right2 = nn.Sequential(
             nn.Conv2d(64+128, 64, 3, padding=1),
+            nn.LeakyReLU(),
             nn.Conv2d(64, 64, 3, padding=1),
+            nn.LeakyReLU(),
         )
         self.right1 = nn.Sequential(
             nn.Conv2d(32+64, 32, 3, padding=1),
+            nn.LeakyReLU(),
             nn.Conv2d(32, 32, 3, padding=1),
+            nn.LeakyReLU(),
         )
+
+        self.head = nn.Sequential(
+            nn.Conv2d(32, 1, 1),
+            nn.Sigmoid(),
+        )
+
         self.upsample = nn.Upsample(scale_factor=2)
 
     def forward(self, x):
@@ -55,4 +75,5 @@ class ReducedUNet(nn.Module):
         right3 = self.right3(torch.cat((mid3, self.upsample(mid4)), dim=1))
         right2 = self.right2(torch.cat((mid2, self.upsample(right3)), dim=1))
         right1 = self.right1(torch.cat((mid1, self.upsample(right2)), dim=1))
-        return right1
+        y = self.head(right1)
+        return y
