@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 
 import cv2
@@ -40,13 +41,19 @@ class OistDataset(Dataset):
     def __len__(self):
         return len(self.files) * len(VALID_BLOCKS)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx, y_as_img=True):
         """
         return (x, y)
+
         x is image.
             Tensor shape (1, BLOCK_SIZE, BLOCK_SIZE), dtype uint8
-        y is list of bees present. Each bee is (x, y).
-            Tensor shape (N, 2), dtype int32
+
+        if y_as_img:
+            y is an image same shape and dtype as x.
+            Ellipses are drawn at a color value of 255,
+                corresponding to the body of the bees, as described in the paper.
+        else:
+            y is list of bees present. Each bee is a tuple (x: int, y: int, angle: float).
         """
         file_idx = idx // len(VALID_BLOCKS)
         block_x, block_y = VALID_BLOCKS[file_idx % len(VALID_BLOCKS)]
@@ -55,17 +62,25 @@ class OistDataset(Dataset):
         max_x = min_x + BLOCK_SIZE
         max_y = min_y + BLOCK_SIZE
 
-        img = read_image(self.files[file_idx])[..., min_y:max_y, min_x:max_x]
+        img = read_image(str(self.files[file_idx]))[..., min_y:max_y, min_x:max_x]
         label_path = (self.dir / "frames_txt" / self.files[file_idx].stem).with_suffix(".txt")
         labels = []
         for label in OistDataset.read_label(label_path):
             if (min_x < label[1] < max_x
                     and min_y < label[2] < max_y
                     and label[0] == 1):
-                labels.append((label[1] - min_x, label[2] - min_y))
-        labels = torch.tensor(labels, dtype=torch.int32)
+                labels.append((label[1] - min_x, label[2] - min_y, label[3]))
 
-        return (img, labels)
+        if y_as_img:
+            y_img = np.zeros((img.shape[1], img.shape[2], 1), dtype=np.uint8)
+            for x, y, angle in labels:
+                # TODO some angle is wrong
+                angle = angle * 180 / math.pi + 90
+                cv2.ellipse(y_img, (x, y), (35, 20), angle, 0, 360, 255, -1)
+            y_img = torch.from_numpy(y_img).permute(2, 0, 1)
+            return img, y_img
+        else:
+            return img, labels
 
     @staticmethod
     def read_label(path):
@@ -82,8 +97,6 @@ class OistDataset(Dataset):
 
 if __name__ == "__main__":
     dataset = OistDataset("/mnt/data/patrick/Datasets/OistBee/Detection")
-    img, labels = dataset[10]
-    img = img.permute(1, 2, 0).numpy()
-    for x, y in labels:
-        cv2.circle(img, (x.item(), y.item()), 15, (255, 0, 0), -1)
-    cv2.imwrite("sample.png", img)
+    x, y = dataset[10]
+    cv2.imwrite("x.png", x.permute(1, 2, 0).numpy())
+    cv2.imwrite("y.png", y.permute(1, 2, 0).numpy())
