@@ -46,7 +46,7 @@ class OistDataset(Dataset):
         self.files = list((self.dir / "frames").iterdir())
         self.files = [f for f in self.files if f.suffix in VALID_EXTENSIONS]
 
-        self.resize = T.Resize((OUTPUT_RES, OUTPUT_RES))
+        self.resize = T.Resize((OUTPUT_RES, OUTPUT_RES), antialias=True)
         self.blur = T.GaussianBlur(5)
 
     def __len__(self):

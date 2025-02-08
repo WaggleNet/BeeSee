@@ -74,13 +74,17 @@ def main():
     parser.add_argument("--data", type=Path, required=True, help="Path to the dataset directory.")
     parser.add_argument("--resume", type=Path, help="Model file to resume from.")
     parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--lr", type=float, default=1e-4)
     args = parser.parse_args()
 
     print("Training on device", DEVICE)
 
     model = ReducedUNet().to(DEVICE)
+    print(model)
+    num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print("Number of parameters:", num_params)
+
     if args.resume is not None:
         print("Resuming from", args.resume)
         model.load_state_dict(torch.load(args.resume, map_location=DEVICE))
