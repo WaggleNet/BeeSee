@@ -31,7 +31,7 @@ def main():
     pred = model(x.float() / 255)
 
     # Make matplotlib plot
-    fig, axs = plt.subplots(args.samples, 4)
+    fig, axs = plt.subplots(args.samples, 4, dpi=300)
     axs[0, 0].set_title("Input")
     axs[0, 1].set_title("Prediction")
     axs[0, 2].set_title("Truth")
@@ -50,7 +50,7 @@ def main():
         axs[i, 3].imshow(composite)
 
     #plt.show()
-    plt.savefig("test.png")
+    plt.savefig("test.jpg")
 
 
 if __name__ == "__main__":
