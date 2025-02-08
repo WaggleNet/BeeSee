@@ -1,3 +1,7 @@
+"""
+PyTorch dataset class. Handles parsing dataset from disk.
+"""
+
 import math
 from pathlib import Path
 
@@ -10,6 +14,7 @@ from torchvision import transforms as T
 from torchvision.io import read_image
 
 
+# Crop resolution in raw image.
 BLOCK_SIZE = 1024
 # Block indices (x, y) for the 30FPS dataset.
 VALID_BLOCKS = (
@@ -20,6 +25,7 @@ VALID_BLOCKS = (
     (2, 3),
     (3, 3),
 )
+# Output res of dataset.
 OUTPUT_RES = 512
 
 VALID_EXTENSIONS = (
@@ -33,9 +39,12 @@ class OistDataset(Dataset):
     """
     Iterates dataset from https://groups.oist.jp/bptu/honeybee-tracking-dataset
 
-    Each file is (1024 * 5 = 5120) pixels square.
-    Split this into 25 grids of 1024.
-    In some datasets, only certain grids are annotated.
+    Each file is (1024 * 5 = 5120px) pixels square.
+    Split this into 25 blocks of 1024px.
+    In some datasets, only certain blocks (VALID_BLOCKS) are annotated.
+
+    The ground truth is an ellipse mask at the position and orientation of each bee,
+    according to the 2017 paper.
     """
 
     def __init__(self, dir):
@@ -60,11 +69,12 @@ class OistDataset(Dataset):
             Tensor shape (1, BLOCK_SIZE, BLOCK_SIZE), dtype uint8
 
         y is an image same shape and dtype as x.
-        Ellipses are drawn at a color value of 255,
+        Ellipse masks are drawn at a color value of 255,
             corresponding to the body of the bees, as described in the paper.
         """
         file_idx = idx // len(VALID_BLOCKS)
         block_x, block_y = VALID_BLOCKS[file_idx % len(VALID_BLOCKS)]
+        # min/max pixels of the block.
         min_x = block_x * BLOCK_SIZE
         min_y = block_y * BLOCK_SIZE
         max_x = min_x + BLOCK_SIZE
@@ -74,12 +84,14 @@ class OistDataset(Dataset):
 
         label_path = (self.dir / "frames_txt" / self.files[file_idx].stem).with_suffix(".txt")
         labels = []
+        # Filter labels in block.
         for label in OistDataset.read_label(label_path):
             if (min_x < label[1] < max_x
                     and min_y < label[2] < max_y
                     and label[0] == 1):
                 labels.append((label[1] - min_x, label[2] - min_y, label[3]))
 
+        # Draw ellipse.
         y_img = np.zeros((img.shape[1], img.shape[2], 1), dtype=np.uint8)
         for x, y, angle in labels:
             angle = angle * 180 / math.pi + 90
@@ -104,7 +116,12 @@ class OistDataset(Dataset):
 
 
 if __name__ == "__main__":
-    dataset = OistDataset("/mnt/data/patrick/Datasets/OistBee/Detection")
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data", type=Path, required=True)
+    args = parser.parse_args()
+
+    dataset = OistDataset(args.data)
     x, y = dataset[10]
     cv2.imwrite("x.png", x.permute(1, 2, 0).numpy())
     cv2.imwrite("y.png", y.permute(1, 2, 0).numpy())

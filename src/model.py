@@ -1,5 +1,12 @@
+"""
+U-Net model.
+"""
+
 import torch
 import torch.nn as nn
+
+# Base channels in conv layers.
+CHANNELS = 32
 
 
 class ReducedUNet(nn.Module):
@@ -13,55 +20,57 @@ class ReducedUNet(nn.Module):
     def __init__(self):
         super().__init__()
 
+        CH = CHANNELS
+
         # Naming: left/right (which side of the U-Net), 1/2/3 (layer)
         self.left1 = nn.Sequential(
-            nn.Conv2d(1, 32, 3, padding=1),
+            nn.Conv2d(1, CH, 3, padding=1),
             nn.LeakyReLU(),
-            nn.Conv2d(32, 32, 3, padding=1),
+            nn.Conv2d(CH, CH, 3, padding=1),
             nn.LeakyReLU(),
         )
         self.left2 = nn.Sequential(
             nn.MaxPool2d(2),
-            nn.Conv2d(32, 64, 3, padding=1),
+            nn.Conv2d(CH, 2*CH, 3, padding=1),
             nn.LeakyReLU(),
-            nn.Conv2d(64, 64, 3, padding=1),
+            nn.Conv2d(2*CH, 2*CH, 3, padding=1),
             nn.LeakyReLU(),
         )
         self.left3 = nn.Sequential(
             nn.MaxPool2d(2),
-            nn.Conv2d(64, 128, 3, padding=1),
+            nn.Conv2d(2*CH, 4*CH, 3, padding=1),
             nn.LeakyReLU(),
-            nn.Conv2d(128, 128, 3, padding=1),
+            nn.Conv2d(4*CH, 4*CH, 3, padding=1),
             nn.LeakyReLU(),
         )
         self.left4 = nn.Sequential(
             nn.MaxPool2d(2),
-            nn.Conv2d(128, 256, 3, padding=1),
+            nn.Conv2d(4*CH, 8*CH, 3, padding=1),
             nn.LeakyReLU(),
-            nn.Conv2d(256, 256, 3, padding=1),
+            nn.Conv2d(8*CH, 8*CH, 3, padding=1),
             nn.LeakyReLU(),
         )
         self.right3 = nn.Sequential(
-            nn.Conv2d(128+256, 128, 3, padding=1),
+            nn.Conv2d(12*CH, 4*CH, 3, padding=1),
             nn.LeakyReLU(),
-            nn.Conv2d(128, 128, 3, padding=1),
+            nn.Conv2d(4*CH, 4*CH, 3, padding=1),
             nn.LeakyReLU(),
         )
         self.right2 = nn.Sequential(
-            nn.Conv2d(64+128, 64, 3, padding=1),
+            nn.Conv2d(6*CH, 2*CH, 3, padding=1),
             nn.LeakyReLU(),
-            nn.Conv2d(64, 64, 3, padding=1),
+            nn.Conv2d(2*CH, 2*CH, 3, padding=1),
             nn.LeakyReLU(),
         )
         self.right1 = nn.Sequential(
-            nn.Conv2d(32+64, 32, 3, padding=1),
+            nn.Conv2d(3*CH, CH, 3, padding=1),
             nn.LeakyReLU(),
-            nn.Conv2d(32, 32, 3, padding=1),
+            nn.Conv2d(CH, CH, 3, padding=1),
             nn.LeakyReLU(),
         )
 
         self.head = nn.Sequential(
-            nn.Conv2d(32, 1, 1),
+            nn.Conv2d(CH, 1, 1),
             nn.Sigmoid(),
         )
 

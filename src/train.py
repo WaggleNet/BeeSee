@@ -1,3 +1,10 @@
+"""
+Training loop and logging using:
+U-Net model in model.py,
+OIST dataset and it's implementation in dataset.py,
+Tensorboard for logging.
+"""
+
 import argparse
 from pathlib import Path
 
@@ -30,7 +37,7 @@ def train(args, model):
     criterion = torch.nn.MSELoss()
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
-    writer = SummaryWriter()
+    writer = SummaryWriter(log_dir=str(args.logdir))
     train_step = 0
 
     for epoch in range(args.epochs):
@@ -73,9 +80,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, required=True, help="Path to the dataset directory.")
     parser.add_argument("--resume", type=Path, help="Model file to resume from.")
+    parser.add_argument("--logdir", type=Path, default="runs", help="Path to tensorboard logs.")
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--epochs", type=int, default=50)
-    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--lr", type=float, default=2e-4)
     args = parser.parse_args()
 
     print("Training on device", DEVICE)
@@ -84,6 +92,17 @@ def main():
     print(model)
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print("Number of parameters:", num_params)
+
+    args.logdir.mkdir(exist_ok=True, parents=True)
+    with open(args.logdir / "params.txt", "w") as f:
+        print("Number of parameters in model:", num_params, file=f)
+        print("Data:", args.data, file=f)
+        print("Resume from:", args.resume, file=f)
+        print("Log dir:", args.logdir, file=f)
+        print("Batch size:", args.batch_size, file=f)
+        print("Epochs:", args.epochs, file=f)
+        print("LR:", args.lr, file=f)
+        print(model, file=f)
 
     if args.resume is not None:
         print("Resuming from", args.resume)
