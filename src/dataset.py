@@ -7,6 +7,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from tqdm import trange
 
 import torch
 from torch.utils.data import Dataset
@@ -15,18 +16,14 @@ from torchvision.io import read_image
 
 
 # Crop resolution in raw image.
-BLOCK_SIZE = 1024
-# Block indices (x, y) for the 30FPS dataset.
-VALID_BLOCKS = (
-    (1, 2),
-    (2, 2),
-    (3, 2),
-    (1, 3),
-    (2, 3),
-    (3, 3),
-)
+BLOCK_SIZE = 512
+# Block indices (x, y).
+VALID_BLOCKS = []
+for x in range(2, 8):
+    for y in range(4, 8):
+        VALID_BLOCKS.append((x, y))
 # Output res of dataset.
-OUTPUT_RES = 512
+OUTPUT_RES = 256
 
 VALID_EXTENSIONS = (
     ".png",
@@ -45,18 +42,34 @@ class OistDataset(Dataset):
 
     The ground truth is an ellipse mask at the position and orientation of each bee,
     according to the 2017 paper.
+
+    Will call self.cache_ground_truth() to write new cache files to disk.
     """
 
-    def __init__(self, dir):
+    def __init__(self, dir, load_memory=False):
+        """
+        load_memory: Whether to load all images into memory (beware memory usage).
+        """
         self.dir = Path(dir)
+        self.load_memory = load_memory
+        self.memory_cache = None
+
         assert (self.dir / "frames").is_dir()
         assert (self.dir / "frames_txt").is_dir()
+        (self.dir / "ground_truth").mkdir(exist_ok=True)
 
         self.files = list((self.dir / "frames").iterdir())
         self.files = [f for f in self.files if f.suffix in VALID_EXTENSIONS]
 
         self.resize = T.Resize((OUTPUT_RES, OUTPUT_RES), antialias=True)
-        self.blur = T.GaussianBlur(5)
+        # self.blur = T.GaussianBlur(5)
+
+        self.cache_ground_truth()
+        if self.load_memory:
+            self.do_load_memory()
+
+    def get_gt_path(self, file_idx):
+        return (self.dir / "ground_truth" / self.files[file_idx].stem).with_suffix(".jpg")
 
     def __len__(self):
         return len(self.files) * len(VALID_BLOCKS)
@@ -73,34 +86,22 @@ class OistDataset(Dataset):
             corresponding to the body of the bees, as described in the paper.
         """
         file_idx = idx // len(VALID_BLOCKS)
-        block_x, block_y = VALID_BLOCKS[file_idx % len(VALID_BLOCKS)]
+        block_x, block_y = VALID_BLOCKS[idx % len(VALID_BLOCKS)]
         # min/max pixels of the block.
         min_x = block_x * BLOCK_SIZE
         min_y = block_y * BLOCK_SIZE
         max_x = min_x + BLOCK_SIZE
         max_y = min_y + BLOCK_SIZE
 
-        img = read_image(str(self.files[file_idx]))[..., min_y:max_y, min_x:max_x]
+        if self.load_memory:
+            x, y = self.memory_cache[idx]
+        else:
+            x = read_image(str(self.files[file_idx]))[..., min_y:max_y, min_x:max_x]
+            y = read_image(str(self.get_gt_path(file_idx)))[..., min_y:max_y, min_x:max_x]
 
-        label_path = (self.dir / "frames_txt" / self.files[file_idx].stem).with_suffix(".txt")
-        labels = []
-        # Filter labels in block.
-        for label in OistDataset.read_label(label_path):
-            if (min_x < label[1] < max_x
-                    and min_y < label[2] < max_y
-                    and label[0] == 1):
-                labels.append((label[1] - min_x, label[2] - min_y, label[3]))
-
-        # Draw ellipse.
-        y_img = np.zeros((img.shape[1], img.shape[2], 1), dtype=np.uint8)
-        for x, y, angle in labels:
-            angle = angle * 180 / math.pi + 90
-            cv2.ellipse(y_img, (x, y), (35, 20), angle, 0, 360, 255, -1)
-        y_img = torch.from_numpy(y_img).permute(2, 0, 1)
-
-        img = self.resize(img)
-        y_img = self.blur(self.resize(y_img))
-        return img, y_img
+        x = self.resize(x)
+        y = self.resize(y)
+        return x, y
 
     @staticmethod
     def read_label(path):
@@ -114,14 +115,57 @@ class OistDataset(Dataset):
                 angle = values[5]
                 yield (cls, x, y, angle)
 
+    def draw_ground_truth(self, label_path, height, width):
+        """
+        Draw ground truth (ellipses mask) for one sample, and return as np array.
+        """
+        # Draw ellipses.
+        y_img = np.zeros((height, width, 1), dtype=np.uint8)
+        for _, x, y, angle in OistDataset.read_label(label_path):
+            angle = angle * 180 / math.pi + 90
+            cv2.ellipse(y_img, (x, y), (35, 20), angle, 0, 360, 255, -1)
+
+        return y_img
+
+    def cache_ground_truth(self, force_rebuild=False):
+        """
+        Call this before training to generate ground truth cache.
+        """
+        for i in trange(len(self.files), desc="Generating ground truth cache"):
+            gt_path = self.get_gt_path(i)
+            if not gt_path.exists() or force_rebuild:
+                x = read_image(str(self.files[i]))
+                label_path = (self.dir / "frames_txt" / self.files[i].stem).with_suffix(".txt")
+                y = self.draw_ground_truth(label_path, x.shape[1], x.shape[2])
+                cv2.imwrite(str(gt_path), y)
+
+    def do_load_memory(self):
+        """
+        Load all images into memory.
+        """
+        self.memory_cache = []
+        for i in trange(len(self.files), desc="Loading dataset into memory"):
+            gt_path = self.get_gt_path(i)
+            x = read_image(str(self.files[i]))
+            y = read_image(str(gt_path))
+            self.memory_cache.append((x, y))
+
 
 if __name__ == "__main__":
     import argparse
+    import time
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, required=True)
     args = parser.parse_args()
 
     dataset = OistDataset(args.data)
+
+    time_start = time.time()
+    for i in range(10):
+        _ = dataset[i]
+    time_end = time.time()
+    print("Fetched 10 samples in", time_end - time_start)
+
     x, y = dataset[10]
     cv2.imwrite("x.png", x.permute(1, 2, 0).numpy())
     cv2.imwrite("y.png", y.permute(1, 2, 0).numpy())
