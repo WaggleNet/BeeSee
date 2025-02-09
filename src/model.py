@@ -25,47 +25,71 @@ class ReducedUNet(nn.Module):
         # Naming: left/right (which side of the U-Net), 1/2/3 (layer)
         self.left1 = nn.Sequential(
             nn.Conv2d(1, CH, 3, padding=1),
+            nn.BatchNorm2d(CH),
             nn.LeakyReLU(),
+
             nn.Conv2d(CH, CH, 3, padding=1),
+            nn.BatchNorm2d(CH),
             nn.LeakyReLU(),
         )
         self.left2 = nn.Sequential(
             nn.MaxPool2d(2),
+
             nn.Conv2d(CH, 2*CH, 3, padding=1),
+            nn.BatchNorm2d(2*CH),
             nn.LeakyReLU(),
+
             nn.Conv2d(2*CH, 2*CH, 3, padding=1),
+            nn.BatchNorm2d(2*CH),
             nn.LeakyReLU(),
         )
         self.left3 = nn.Sequential(
             nn.MaxPool2d(2),
+
             nn.Conv2d(2*CH, 4*CH, 3, padding=1),
+            nn.BatchNorm2d(4*CH),
             nn.LeakyReLU(),
+
             nn.Conv2d(4*CH, 4*CH, 3, padding=1),
+            nn.BatchNorm2d(4*CH),
             nn.LeakyReLU(),
         )
         self.left4 = nn.Sequential(
             nn.MaxPool2d(2),
+
             nn.Conv2d(4*CH, 8*CH, 3, padding=1),
+            nn.BatchNorm2d(8*CH),
             nn.LeakyReLU(),
+
             nn.Conv2d(8*CH, 8*CH, 3, padding=1),
+            nn.BatchNorm2d(8*CH),
             nn.LeakyReLU(),
         )
         self.right3 = nn.Sequential(
             nn.Conv2d(12*CH, 4*CH, 3, padding=1),
+            nn.BatchNorm2d(4*CH),
             nn.LeakyReLU(),
+
             nn.Conv2d(4*CH, 4*CH, 3, padding=1),
+            nn.BatchNorm2d(4*CH),
             nn.LeakyReLU(),
         )
         self.right2 = nn.Sequential(
             nn.Conv2d(6*CH, 2*CH, 3, padding=1),
+            nn.BatchNorm2d(2*CH),
             nn.LeakyReLU(),
+
             nn.Conv2d(2*CH, 2*CH, 3, padding=1),
+            nn.BatchNorm2d(2*CH),
             nn.LeakyReLU(),
         )
         self.right1 = nn.Sequential(
             nn.Conv2d(3*CH, CH, 3, padding=1),
+            nn.BatchNorm2d(CH),
             nn.LeakyReLU(),
+
             nn.Conv2d(CH, CH, 3, padding=1),
+            nn.BatchNorm2d(CH),
             nn.LeakyReLU(),
         )
 
@@ -93,5 +117,8 @@ class ReducedUNet(nn.Module):
                 nn.init.xavier_uniform_(m.weight)
                 if m.bias is not None:
                     nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.normal_(m.weight, 1.0, 0.02)
+                nn.init.zeros_(m.bias)
 
         self.apply(init_fn)

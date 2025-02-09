@@ -82,8 +82,8 @@ def main():
     parser.add_argument("--data", type=Path, required=True, help="Path to the dataset directory.")
     parser.add_argument("--resume", type=Path, help="Model file to resume from.")
     parser.add_argument("--logdir", type=Path, default="runs", help="Path to tensorboard logs.")
-    parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--epochs", type=int, default=50)
+    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--lr", type=float, default=1e-3)
     args = parser.parse_args()
 
