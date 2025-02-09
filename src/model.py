@@ -86,3 +86,12 @@ class ReducedUNet(nn.Module):
         right1 = self.right1(torch.cat((mid1, self.upsample(right2)), dim=1))
         y = self.head(right1)
         return y
+
+    def init_weights(self):
+        def init_fn(m):
+            if isinstance(m, nn.Conv2d):
+                nn.init.xavier_uniform_(m.weight)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+
+        self.apply(init_fn)

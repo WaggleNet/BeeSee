@@ -69,9 +69,10 @@ def train(args, model):
 
             total_loss /= len(test_loader)
             writer.add_scalar("test_loss", total_loss, train_step)
-            writer.add_images("test_x", x, train_step)
-            writer.add_images("test_y", y, train_step)
-            writer.add_images("test_pred", pred, train_step)
+            if epoch % 5 == 0 or epoch == args.epochs - 1:
+                writer.add_images("test_x", x, train_step)
+                writer.add_images("test_y", y, train_step)
+                writer.add_images("test_pred", pred, train_step)
 
         torch.save(model.state_dict(), "model.pt")
 
@@ -83,7 +84,7 @@ def main():
     parser.add_argument("--logdir", type=Path, default="runs", help="Path to tensorboard logs.")
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--epochs", type=int, default=50)
-    parser.add_argument("--lr", type=float, default=2e-4)
+    parser.add_argument("--lr", type=float, default=1e-3)
     args = parser.parse_args()
 
     print("Training on device", DEVICE)
@@ -104,7 +105,10 @@ def main():
         print("LR:", args.lr, file=f)
         print(model, file=f)
 
-    if args.resume is not None:
+    if args.resume is None:
+        print("Using Xavier weight init.")
+        model.init_weights()
+    else:
         print("Resuming from", args.resume)
         model.load_state_dict(torch.load(args.resume, map_location=DEVICE))
 
