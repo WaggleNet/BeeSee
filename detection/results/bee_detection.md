@@ -3,6 +3,8 @@
 Implemented and trained Reduced U-Net from the 2017 bee tracking paper:
 https://arxiv.org/pdf/1712.08324
 
+In this report, we evaluate the performance on the problem of detecting a dense collection of bees.
+
 ## Model
 
 The model is a Reduced U-Net, as described in the paper. See `model.py` for implementation details.
@@ -43,3 +45,9 @@ This was fixed with `BatchNorm2d`. Almost all runs converge quickly now.
 ![](./train_loss.jpg)
 
 ![](./test_loss.jpg)
+
+### PCA
+
+PCA analysis on all hidden layers.
+
+![](./hidden_layers.jpg)

@@ -100,7 +100,7 @@ class ReducedUNet(nn.Module):
 
         self.upsample = nn.Upsample(scale_factor=2)
 
-    def forward(self, x):
+    def forward(self, x, hidden_layers=False):
         mid1 = self.left1(x)
         mid2 = self.left2(mid1)
         mid3 = self.left3(mid2)
@@ -109,7 +109,21 @@ class ReducedUNet(nn.Module):
         right2 = self.right2(torch.cat((mid2, self.upsample(right3)), dim=1))
         right1 = self.right1(torch.cat((mid1, self.upsample(right2)), dim=1))
         y = self.head(right1)
-        return y
+
+        if hidden_layers:
+            return {
+                "input": x,
+                "mid1": mid1,
+                "mid2": mid2,
+                "mid3": mid3,
+                "mid4": mid4,
+                "right3": right3,
+                "right2": right2,
+                "right1": right1,
+                "output": y,
+            }
+        else:
+            return y
 
     def init_weights(self):
         def init_fn(m):
