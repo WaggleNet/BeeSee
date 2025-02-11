@@ -4,5 +4,5 @@
 
 runs/
 
-!examples/**
-!results/**
+!**/examples/**
+!**/results/**

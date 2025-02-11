@@ -30,12 +30,16 @@ Experiments:
 | Base | 0.5M | 0.55 |
 | Double channels | 1.9M | 0.55 |
 
-# Vanishing gradient problem
+## Fixing the vanishing gradient problem
 
-In a previous experiment, all models except "Half channels" failed to perform well,
-instead converging to output images that are completely black.
-
-This is most likely due to random chance, as the "Base" model had previously performed well once.
-
+In a previous experiment, models tended to fail, producing output images that are completely black.
+This is most likely due to random chance, as models occasionally perform well.
 This was fixed with `BatchNorm2d`. Almost all runs converge quickly now.
 
+## Results
+
+![](./detection.jpg)
+
+![](./train_loss.jpg)
+
+![](./test_loss.jpg)
