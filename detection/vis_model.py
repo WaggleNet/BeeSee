@@ -26,7 +26,7 @@ def main():
     model = ReducedUNet().to(DEVICE)
     model.load_state_dict(torch.load(args.model, map_location=DEVICE))
 
-    dataset = OistDataset(args.data)
+    dataset = OistDataset(args.data, do_aug=False)
     x, _ = random.choice(dataset)
     x = (x.float() / 255).to(DEVICE).unsqueeze(0)
     layers = model.forward(x, hidden_layers=True)
@@ -56,7 +56,10 @@ def main():
 
         ax = axs[img_index // cols, img_index % cols]
         ax.set_title(name)
-        ax.imshow(img)
+        if img_index == 0:
+            ax.imshow(img, cmap="gray")
+        else:
+            ax.imshow(img)
         ax.axis("off")
 
     #plt.tight_layout()

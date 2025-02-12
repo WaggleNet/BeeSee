@@ -3,11 +3,11 @@ PyTorch dataset class. Handles parsing dataset from disk.
 """
 
 import math
+import random
 from pathlib import Path
 
 import cv2
 import numpy as np
-from tqdm import trange
 
 import torch
 from torch.utils.data import Dataset
@@ -42,17 +42,14 @@ class OistDataset(Dataset):
 
     The ground truth is an ellipse mask at the position and orientation of each bee,
     according to the 2017 paper.
-
-    Will call self.cache_ground_truth() to write new cache files to disk.
     """
 
-    def __init__(self, dir, load_memory=False):
+    def __init__(self, dir, do_aug=True):
         """
         load_memory: Whether to load all images into memory (beware memory usage).
         """
         self.dir = Path(dir)
-        self.load_memory = load_memory
-        self.memory_cache = None
+        self.do_aug = do_aug
 
         assert (self.dir / "frames").is_dir()
         assert (self.dir / "frames_txt").is_dir()
@@ -61,12 +58,18 @@ class OistDataset(Dataset):
         self.files = list((self.dir / "frames").iterdir())
         self.files = [f for f in self.files if f.suffix in VALID_EXTENSIONS]
 
-        self.resize = T.Resize((OUTPUT_RES, OUTPUT_RES), antialias=True)
-        # self.blur = T.GaussianBlur(5)
-
-        self.cache_ground_truth()
-        if self.load_memory:
-            self.do_load_memory()
+        self.transform = T.Compose([
+            T.Resize((OUTPUT_RES, OUTPUT_RES)),
+        ])
+        self.both_aug = T.Compose([
+            T.RandomResizedCrop(OUTPUT_RES, scale=(0.6, 1)),
+        ])
+        self.x_aug = T.Compose([
+            T.RandomAdjustSharpness(0.7),
+        ])
+        self.y_aug = T.Compose([
+            T.ElasticTransform(),
+        ])
 
     def get_gt_path(self, file_idx):
         return (self.dir / "ground_truth" / self.files[file_idx].stem).with_suffix(".jpg")
@@ -93,15 +96,35 @@ class OistDataset(Dataset):
         max_x = min_x + BLOCK_SIZE
         max_y = min_y + BLOCK_SIZE
 
-        if self.load_memory:
-            x, y = self.memory_cache[idx]
-        else:
-            x = read_image(str(self.files[file_idx]))[..., min_y:max_y, min_x:max_x]
-            y = read_image(str(self.get_gt_path(file_idx)))[..., min_y:max_y, min_x:max_x]
+        x_img = read_image(str(self.files[file_idx]))[..., min_y:max_y, min_x:max_x]
 
-        x = self.resize(x)
-        y = self.resize(y)
-        return x, y
+        label_path = (self.dir / "frames_txt" / self.files[file_idx].stem).with_suffix(".txt")
+        labels = []
+        # Filter labels in block.
+        for label in OistDataset.read_label(label_path):
+            if (min_x < label[1] < max_x
+                    and min_y < label[2] < max_y
+                    and label[0] == 1):
+                labels.append((label[1] - min_x, label[2] - min_y, label[3]))
+
+        # Draw ellipse.
+        y_img = np.zeros((x_img.shape[1], x_img.shape[2], 1), dtype=np.uint8)
+        for x, y, angle in labels:
+            # if random.random() < 0.5:
+            #     continue
+            angle = angle * 180 / math.pi + 90
+            cv2.ellipse(y_img, (x, y), (35, 20), angle, 0, 360, 255, -1)
+        y_img = torch.from_numpy(y_img).permute(2, 0, 1)
+
+        both_img = self.transform(torch.stack([x_img, y_img], dim=0))
+        if self.do_aug and random.random() < 0.5:
+            both_img = self.both_aug(both_img)
+            x_img, y_img = both_img[0], both_img[1]
+            x_img = self.x_aug(x_img)
+            y_img = self.y_aug(y_img)
+        else:
+            x_img, y_img = both_img[0], both_img[1]
+        return x_img, y_img
 
     @staticmethod
     def read_label(path):
@@ -114,41 +137,6 @@ class OistDataset(Dataset):
                 y = values[1] + values[4]
                 angle = values[5]
                 yield (cls, x, y, angle)
-
-    def draw_ground_truth(self, label_path, height, width):
-        """
-        Draw ground truth (ellipses mask) for one sample, and return as np array.
-        """
-        # Draw ellipses.
-        y_img = np.zeros((height, width, 1), dtype=np.uint8)
-        for _, x, y, angle in OistDataset.read_label(label_path):
-            angle = angle * 180 / math.pi + 90
-            cv2.ellipse(y_img, (x, y), (35, 20), angle, 0, 360, 255, -1)
-
-        return y_img
-
-    def cache_ground_truth(self, force_rebuild=False):
-        """
-        Call this before training to generate ground truth cache.
-        """
-        for i in trange(len(self.files), desc="Generating ground truth cache"):
-            gt_path = self.get_gt_path(i)
-            if not gt_path.exists() or force_rebuild:
-                x = read_image(str(self.files[i]))
-                label_path = (self.dir / "frames_txt" / self.files[i].stem).with_suffix(".txt")
-                y = self.draw_ground_truth(label_path, x.shape[1], x.shape[2])
-                cv2.imwrite(str(gt_path), y)
-
-    def do_load_memory(self):
-        """
-        Load all images into memory.
-        """
-        self.memory_cache = []
-        for i in trange(len(self.files), desc="Loading dataset into memory"):
-            gt_path = self.get_gt_path(i)
-            x = read_image(str(self.files[i]))
-            y = read_image(str(gt_path))
-            self.memory_cache.append((x, y))
 
 
 if __name__ == "__main__":

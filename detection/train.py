@@ -36,6 +36,7 @@ def train(args, model):
 
     criterion = torch.nn.MSELoss()
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
+    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma=args.lr_decay)
 
     writer = SummaryWriter(log_dir=str(args.logdir))
     train_step = 0
@@ -51,8 +52,10 @@ def train(args, model):
             loss.backward()
             optim.step()
 
-            pbar.set_description(f"Train: epoch={epoch} loss={loss.item():.3f}")
+            curr_lr = optim.param_groups[0]["lr"]
+            pbar.set_description(f"Train: epoch={epoch} loss={loss.item():.3f} lr={curr_lr:.3e}")
             writer.add_scalar("train_loss", loss.item(), train_step)
+            writer.add_scalar("lr", curr_lr, train_step)
             train_step += 1
 
         with torch.no_grad():
@@ -75,6 +78,7 @@ def train(args, model):
                 writer.add_images("test_pred", pred, train_step)
 
         torch.save(model.state_dict(), "model.pt")
+        lr_scheduler.step()
 
 
 def main():
@@ -85,6 +89,7 @@ def main():
     parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--lr_decay", type=float, default=0.7)
     args = parser.parse_args()
 
     print("Training on device", DEVICE)
@@ -103,6 +108,7 @@ def main():
         print("Batch size:", args.batch_size, file=f)
         print("Epochs:", args.epochs, file=f)
         print("LR:", args.lr, file=f)
+        print("LR decay:", args.lr_decay, file=f)
         print(model, file=f)
 
     if args.resume is None:
