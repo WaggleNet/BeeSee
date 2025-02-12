@@ -40,7 +40,8 @@ def main():
         # 3 axis PCA
         if layer.shape[0] > 3:
             orig_res = layer.shape[1:]
-            mat = layer.reshape(layer.shape[0], -1)[:, ::orig_res[0]].T
+            indices = random.choices(range(orig_res[0] * orig_res[1]), k=256)
+            mat = layer.reshape(layer.shape[0], -1)[:, indices].T
             u, s, v = np.linalg.svd(mat)
             comps = v[:3]
 
