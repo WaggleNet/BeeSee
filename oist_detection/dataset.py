@@ -23,7 +23,7 @@ for x in range(2, 8):
     for y in range(4, 8):
         VALID_BLOCKS.append((x, y))
 # Output res of dataset.
-OUTPUT_RES = 512
+OUTPUT_RES = 256
 
 VALID_EXTENSIONS = (
     ".png",
