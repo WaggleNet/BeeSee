@@ -23,7 +23,7 @@ for x in range(2, 8):
     for y in range(4, 8):
         VALID_BLOCKS.append((x, y))
 # Output res of dataset.
-OUTPUT_RES = 256
+OUTPUT_RES = 512
 
 VALID_EXTENSIONS = (
     ".png",
@@ -110,8 +110,6 @@ class OistDataset(Dataset):
         # Draw ellipse.
         y_img = np.zeros((x_img.shape[1], x_img.shape[2], 1), dtype=np.uint8)
         for x, y, angle in labels:
-            # if random.random() < 0.5:
-            #     continue
             angle = angle * 180 / math.pi + 90
             cv2.ellipse(y_img, (x, y), (35, 20), angle, 0, 360, 255, -1)
         y_img = torch.from_numpy(y_img).permute(2, 0, 1)

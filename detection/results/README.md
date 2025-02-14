@@ -32,12 +32,6 @@ Experiments:
 | Base | 0.5M | 0.55 |
 | Double channels | 1.9M | 0.55 |
 
-## Fixing the vanishing gradient problem
-
-In a previous experiment, models tended to fail, producing output images that are completely black.
-This is most likely due to random chance, as models occasionally perform well.
-This was fixed with `BatchNorm2d`. Almost all runs converge quickly now.
-
 ## Results
 
 ![](./detection.jpg)
@@ -46,8 +40,16 @@ This was fixed with `BatchNorm2d`. Almost all runs converge quickly now.
 
 ![](./test_loss.jpg)
 
-### PCA
+## Hidden layer visualization
 
-PCA analysis on all hidden layers.
+Model: U-Net with residual connections, 16 base channels, 5 epochs. Final loss 0.047.
+
+We visualize the model with PCA on the hidden layers.
 
 ![](./hidden_layers.jpg)
+
+## Fixing the vanishing gradient problem
+
+In a previous experiment, models tended to fail, producing output images that are completely black.
+This is most likely due to random chance, as models occasionally perform well.
+This was fixed with `BatchNorm2d`. Almost all runs converge quickly now.

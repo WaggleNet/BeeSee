@@ -72,10 +72,10 @@ def train(args, model):
 
             total_loss /= len(test_loader)
             writer.add_scalar("test_loss", total_loss, train_step)
-            if epoch % 5 == 0 or epoch == args.epochs - 1:
-                writer.add_images("test_x", x, train_step)
-                writer.add_images("test_y", y, train_step)
-                writer.add_images("test_pred", pred, train_step)
+            # if epoch % 5 == 0 or epoch == args.epochs - 1:
+            writer.add_images("test_x", x, train_step)
+            writer.add_images("test_y", y, train_step)
+            writer.add_images("test_pred", pred, train_step)
 
         torch.save(model.state_dict(), "model.pt")
         lr_scheduler.step()
