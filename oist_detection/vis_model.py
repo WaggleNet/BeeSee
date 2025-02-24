@@ -43,11 +43,11 @@ def main():
             indices = random.choices(range(orig_res[0] * orig_res[1]), k=256)
             mat = layer.reshape(layer.shape[0], -1)[:, indices].T
             u, s, v = np.linalg.svd(mat)
-            comps = v[:3]
+            comps = v[:, :3]
 
             img = np.zeros((3, orig_res[0], orig_res[1]))
             for i in range(3):
-                img[i] = np.tensordot(layer, comps[i], axes=(0, 0))
+                img[i] = np.tensordot(layer, comps[:, i], axes=(0, 0))
             img = img.transpose(1, 2, 0).astype(np.float32)
             # Sigmoid
             img = 1 / (1 + np.exp(-img))
