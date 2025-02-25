@@ -12,7 +12,7 @@ import pygame
 
 VALID_EXTS = (".png", ".jpg", ".jpeg")
 RES = 800
-BRUSH_SIZE = 10
+BRUSH_SIZE = 30
 
 
 def label_img(window, args, img_path, i):
@@ -62,6 +62,11 @@ def main():
 
     window = pygame.display.set_mode((RES, RES))
 
+    done = []
+    if (args.output / "done.txt").isfile():
+        with open(args.output / "done.txt") as f:
+            done = f.read().strip().split("\n")
+
     i = 0
     for file in args.data.glob("**/*"):
         if not file.is_file():
@@ -69,11 +74,16 @@ def main():
         if file.suffix not in VALID_EXTS:
             print("Invalid file extension, skipping", file)
             continue
+        if str(file) in done:
+            print("Already labeled, skipping", file)
+            continue
 
         print("Labeling", file)
 
         if not label_img(window, args, file, i):
             break
+        with open(args.output / "done.txt", "a") as f:
+            f.write(f"{file}\n")
         i += 1
 
 
