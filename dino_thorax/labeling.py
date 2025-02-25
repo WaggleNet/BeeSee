@@ -63,7 +63,7 @@ def main():
     window = pygame.display.set_mode((RES, RES))
 
     done = []
-    if (args.output / "done.txt").isfile():
+    if (args.output / "done.txt").is_file():
         with open(args.output / "done.txt") as f:
             done = f.read().strip().split("\n")
 

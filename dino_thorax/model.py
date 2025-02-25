@@ -10,9 +10,9 @@ class DinoSegmentation(nn.Module):
     def __init__(self, num_hidden_layers=1):
         super().__init__()
 
-        n = num_hidden_layers
-
         self.dino = torch.hub.load("facebookresearch/dinov2", "dinov2_vits14_reg")
+
+        n = num_hidden_layers
         self.num_hidden_layers = n
 
         self.head = nn.Sequential(

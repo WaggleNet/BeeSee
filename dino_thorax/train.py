@@ -4,55 +4,12 @@ from pathlib import Path
 from tqdm import tqdm
 
 import torch
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard.writer import SummaryWriter
-from torchvision import transforms as T
-from torchvision.io import read_image
 
+from constants import *
+from dataset import ThoraxDataset
 from model import DinoSegmentation
-
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-class ThoraxDataset(Dataset):
-    def __init__(self, data_dir: Path, res=448):
-        assert res % 14 == 0
-
-        self.data_dir = data_dir
-        self.indices = set()
-        for f in data_dir.iterdir():
-            if "_img" in f.stem:
-                self.indices.add(f.stem.split("_")[0])
-        self.indices = list(self.indices)
-
-        self.res = res
-
-        self.transform_both = T.Compose([
-            T.RandomHorizontalFlip(),
-            T.RandomVerticalFlip(),
-            T.RandomRotation(90),
-        ])
-        self.transform_x = T.Compose([
-            T.Resize((res, res)),
-        ])
-        self.transform_y = T.Compose([
-            T.Resize((res // 14, res // 14)),
-        ])
-
-    def __len__(self):
-        return len(self.indices)
-
-    def __getitem__(self, idx):
-        img = read_image(str(self.data_dir / f"{self.indices[idx]}_img.jpg")).float() / 255
-        label = read_image(str(self.data_dir / f"{self.indices[idx]}_label.jpg")).float() / 255
-
-        both = torch.cat([img, label], dim=0)
-        both = self.transform_both(both)
-        img, label = both[:3], both[3:]
-        img = self.transform_x(img)
-        label = self.transform_y(label)
-
-        return img, label
 
 
 def train(args, model):
@@ -120,7 +77,7 @@ def main():
     parser.add_argument("--data", type=Path, required=True, help="Path to the dataset directory.")
     parser.add_argument("--resume", type=Path, help="Model file to resume from.")
     parser.add_argument("--logdir", type=Path, default="runs", help="Path to tensorboard logs.")
-    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--lr_decay", type=float, default=0.7)

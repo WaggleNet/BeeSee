@@ -2,6 +2,7 @@
 *.jpg
 *.pt
 
+datasets/
 runs/
 
 !**/examples/**
