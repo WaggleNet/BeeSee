@@ -68,6 +68,11 @@ def main():
             done = f.read().strip().split("\n")
 
     i = 0
+    for file in args.output.iterdir():
+        s = file.stem.split("_")[0]
+        if s.isdigit():
+            i = max(i, int(s) + 1)
+
     for file in args.data.glob("**/*"):
         if not file.is_file():
             continue
@@ -78,7 +83,7 @@ def main():
             print("Already labeled, skipping", file)
             continue
 
-        print("Labeling", file)
+        print("Labeling", i, file)
 
         if not label_img(window, args, file, i):
             break
