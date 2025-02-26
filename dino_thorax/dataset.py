@@ -24,11 +24,13 @@ class ThoraxDataset(Dataset):
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
             T.RandomRotation(360),
+            T.RandomResizedCrop(res, scale=(0.5, 1.0)),
         ])
         self.transform_x = T.Compose([
             T.Resize((res, res)),
             T.ColorJitter(brightness=0.5, contrast=0.3, saturation=0.6, hue=0.1),
             T.ElasticTransform(10.0),
+            T.RandomInvert(0.3),
         ])
         self.transform_y = T.Compose([
             T.Resize((res // 14, res // 14)),
@@ -50,5 +52,8 @@ class ThoraxDataset(Dataset):
         img, label = both[:3], both[3:]
         img = self.transform_x(img)
         label = self.transform_y(label)
+        mask = label > 0.5
+        label[mask] = 1
+        label[~mask] = 0
 
         return img, label

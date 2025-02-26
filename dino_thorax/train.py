@@ -26,7 +26,7 @@ def train(args, model):
     train_loader = DataLoader(train_data, **loader_args)
     test_loader = DataLoader(test_data, **loader_args)
 
-    criterion = torch.nn.MSELoss()
+    criterion = torch.nn.BCELoss()
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma=args.lr_decay)
 
