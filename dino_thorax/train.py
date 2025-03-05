@@ -4,16 +4,36 @@ from pathlib import Path
 from tqdm import tqdm
 
 import torch
+import torchvision.transforms.functional as F
 from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard.writer import SummaryWriter
 
 from constants import *
 from dataset import ThoraxDataset
+from dataset_oist import OistDataset
 from model import DinoSegmentation
 
 
 def train(args, model):
-    dataset = ThoraxDataset(args.data)
+    def prepare_batch(x, y):
+        """
+        Helper function to preprocess batch (and handle differences between datasets, etc.)
+        """
+        x = x.to(DEVICE)
+        y = y.to(DEVICE)
+
+        if args.dataset_type == "oist":
+            x = torch.cat([x] * 3, dim=1)
+            y = F.resize(y, (y.shape[2] // 14, y.shape[3] // 14))
+
+        return x, y
+
+    if args.dataset_type == "oist":
+        dataset = OistDataset(args.data, output_res=448)
+    elif args.dataset_type == "thorax":
+        dataset = ThoraxDataset(args.data)
+    else:
+        raise ValueError("Invalid dataset type")
     train_len = int(len(dataset) * 0.9)
     test_len = len(dataset) - train_len
     train_data, test_data = random_split(dataset, (train_len, test_len))
@@ -26,7 +46,7 @@ def train(args, model):
     train_loader = DataLoader(train_data, **loader_args)
     test_loader = DataLoader(test_data, **loader_args)
 
-    criterion = torch.nn.BCELoss()
+    criterion = torch.nn.MSELoss()
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma=args.lr_decay)
 
@@ -35,8 +55,7 @@ def train(args, model):
 
     for epoch in range(args.epochs):
         for x, y in (pbar := tqdm(train_loader)):
-            x = x.to(DEVICE)
-            y = y.to(DEVICE)
+            x, y = prepare_batch(x, y)
 
             optim.zero_grad()
             pred = model(x)
@@ -53,8 +72,7 @@ def train(args, model):
         with torch.no_grad():
             total_loss = 0
             for x, y in (pbar := tqdm(test_loader)):
-                x = x.to(DEVICE)
-                y = y.to(DEVICE)
+                x, y = prepare_batch(x, y)
 
                 pred = model(x)
                 loss = criterion(pred, y)
@@ -75,6 +93,7 @@ def train(args, model):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, required=True, help="Path to the dataset directory.")
+    parser.add_argument("--dataset_type", type=str, choices=["oist", "thorax"], default="thorax")
     parser.add_argument("--resume", type=Path, help="Model file to resume from.")
     parser.add_argument("--logdir", type=Path, default="runs", help="Path to tensorboard logs.")
     parser.add_argument("--batch_size", type=int, default=32)

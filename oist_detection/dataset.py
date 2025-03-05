@@ -22,8 +22,6 @@ VALID_BLOCKS = []
 for x in range(2, 8):
     for y in range(4, 8):
         VALID_BLOCKS.append((x, y))
-# Output res of dataset.
-OUTPUT_RES = 256
 
 VALID_EXTENSIONS = (
     ".png",
@@ -44,11 +42,13 @@ class OistDataset(Dataset):
     according to the 2017 paper.
     """
 
-    def __init__(self, dir, do_aug=True):
+    def __init__(self, dir, output_res=256, do_aug=True):
         """
-        load_memory: Whether to load all images into memory (beware memory usage).
+        dir: Path to dataset directory.
+        output_res: Resolution of output x and y image.
         """
         self.dir = Path(dir)
+        self.output_res = output_res
         self.do_aug = do_aug
 
         assert (self.dir / "frames").is_dir()
@@ -59,10 +59,10 @@ class OistDataset(Dataset):
         self.files = [f for f in self.files if f.suffix in VALID_EXTENSIONS]
 
         self.transform = T.Compose([
-            T.Resize((OUTPUT_RES, OUTPUT_RES)),
+            T.Resize((self.output_res, self.output_res)),
         ])
         self.both_aug = T.Compose([
-            T.RandomResizedCrop(OUTPUT_RES, scale=(0.6, 1)),
+            T.RandomResizedCrop(self.output_res, scale=(0.6, 1)),
         ])
         self.x_aug = T.Compose([
             T.RandomAdjustSharpness(0.7),
@@ -114,7 +114,8 @@ class OistDataset(Dataset):
             cv2.ellipse(y_img, (x, y), (35, 20), angle, 0, 360, 255, -1)
         y_img = torch.from_numpy(y_img).permute(2, 0, 1)
 
-        both_img = self.transform(torch.stack([x_img, y_img], dim=0))
+        both_img = torch.stack([x_img, y_img], dim=0).float() / 255
+        both_img = self.transform(both_img)
         if self.do_aug and random.random() < 0.5:
             both_img = self.both_aug(both_img)
             x_img, y_img = both_img[0], both_img[1]

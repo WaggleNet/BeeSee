@@ -43,8 +43,8 @@ def train(args, model):
 
     for epoch in range(args.epochs):
         for x, y in (pbar := tqdm(train_loader)):
-            x = (x.float() / 255).to(DEVICE)
-            y = (y.float() / 255).to(DEVICE)
+            x = x.to(DEVICE)
+            y = y.to(DEVICE)
 
             optim.zero_grad()
             pred = model(x)
@@ -61,8 +61,8 @@ def train(args, model):
         with torch.no_grad():
             total_loss = 0
             for x, y in (pbar := tqdm(test_loader)):
-                x = (x.float() / 255).to(DEVICE)
-                y = (y.float() / 255).to(DEVICE)
+                x = x.to(DEVICE)
+                y = y.to(DEVICE)
 
                 pred = model(x)
                 loss = criterion(pred, y)
