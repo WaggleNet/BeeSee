@@ -25,10 +25,10 @@ class DinoSegmentation(nn.Module):
             nn.LeakyReLU(inplace=True),
 
             nn.Conv2d(64, 1, 1),
-            nn.Sigmoid(),
         )
+        self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x):
+    def forward(self, x, logits=False):
         """
         x: (B, C, H, W), float 0-1.
         return: (B, 1, H, W), float 0-1.
@@ -37,4 +37,7 @@ class DinoSegmentation(nn.Module):
             layers = self.dino.get_intermediate_layers(x, n=self.num_hidden_layers, reshape=True)
             layers = torch.cat(layers, dim=1)
 
-        return self.head(layers)
+        layers = self.head(layers)
+        if not logits:
+            layers = self.sigmoid(layers)
+        return layers

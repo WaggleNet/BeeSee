@@ -46,7 +46,7 @@ def train(args, model):
     train_loader = DataLoader(train_data, **loader_args)
     test_loader = DataLoader(test_data, **loader_args)
 
-    criterion = torch.nn.MSELoss()
+    criterion = torch.nn.BCEWithLogitsLoss()
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma=args.lr_decay)
 
@@ -54,27 +54,27 @@ def train(args, model):
     train_step = 0
 
     for epoch in range(args.epochs):
-        for x, y in (pbar := tqdm(train_loader)):
+        for i, (x, y) in enumerate(pbar := tqdm(train_loader)):
             x, y = prepare_batch(x, y)
 
-            optim.zero_grad()
-            pred = model(x)
+            pred = model(x, logits=True)
             loss = criterion(pred, y)
             loss.backward()
             optim.step()
+            optim.zero_grad()
+            train_step += 1
 
             curr_lr = optim.param_groups[0]["lr"]
             pbar.set_description(f"Train: epoch={epoch} loss={loss.item():.3f} lr={curr_lr:.3e}")
             writer.add_scalar("train_loss", loss.item(), train_step)
             writer.add_scalar("lr", curr_lr, train_step)
-            train_step += 1
 
         with torch.no_grad():
             total_loss = 0
             for x, y in (pbar := tqdm(test_loader)):
                 x, y = prepare_batch(x, y)
 
-                pred = model(x)
+                pred = model(x, logits=True)
                 loss = criterion(pred, y)
                 total_loss += loss.item()
 
@@ -113,6 +113,7 @@ def main():
     with open(args.logdir / "params.txt", "w") as f:
         print("Number of parameters in model:", num_params, file=f)
         print("Data:", args.data, file=f)
+        print("Dataset type:", args.dataset_type, file=f)
         print("Resume from:", args.resume, file=f)
         print("Log dir:", args.logdir, file=f)
         print("Batch size:", args.batch_size, file=f)
