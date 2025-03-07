@@ -1,12 +1,8 @@
-"""
-U-Net model.
-"""
-
 import torch
 import torch.nn as nn
 
 # Base channels in conv layers.
-CHANNELS = 16
+CHANNELS = 32
 
 
 class ReducedUNet(nn.Module):
@@ -14,10 +10,10 @@ class ReducedUNet(nn.Module):
     Implementation of smaller U-Net in "Towards dense object tracking in a 2D honeybee hive".
 
     Input shape: (B, 1, W, H)
-    Output shape: (B, 32, W, H)
+    Output shape: (B, 1, W, H)
     """
 
-    def __init__(self):
+    def __init__(self, init_weights=True):
         super().__init__()
 
         CH = CHANNELS
@@ -96,13 +92,16 @@ class ReducedUNet(nn.Module):
 
         self.head = nn.Sequential(
             nn.Conv2d(CH, 1, 1),
-            nn.Sigmoid(),
         )
 
         self.pooling = nn.MaxPool2d(2)
         self.upsample = nn.Upsample(scale_factor=2)
+        self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x, hidden_layers=False):
+        if init_weights:
+            self.init_weights()
+
+    def forward(self, x, logits=False, hidden_layers=False):
         mid1 = self.left1(x) + self.left1_res(x)
         mid2 = self.left2(self.pooling(mid1)) + self.left2_res(self.pooling(mid1))
         mid3 = self.left3(self.pooling(mid2)) + self.left3_res(self.pooling(mid2))
@@ -114,6 +113,8 @@ class ReducedUNet(nn.Module):
         in1 = torch.cat((mid1, self.upsample(right2)), dim=1)
         right1 = self.right1(in1) + self.right1_res(in1)
         y = self.head(right1)
+        if not logits:
+            y = self.sigmoid(y)
 
         if hidden_layers:
             return {
