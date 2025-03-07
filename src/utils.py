@@ -15,6 +15,7 @@ MODEL_CHOICES = (
 DATA_CHOICES = (
     "oist",
     "thorax",
+    "varroa",
 )
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -38,6 +39,8 @@ def get_dataset_model(data_type, model_type):
             dataset = OistDataset
         elif data_type == "thorax":
             dataset = ThoraxDataset
+        elif data_type == "varroa":
+            dataset = VarroaDataset
         else:
             raise ValueError(f"Unknown data type: {data_type}")
 

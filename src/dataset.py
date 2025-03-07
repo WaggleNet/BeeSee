@@ -116,7 +116,7 @@ class OistDataset(BeeSeeDataset):
         x_img = read_image(str(self.files[file_idx]))[..., min_y:max_y, min_x:max_x]
         x_img = x_img.float() / 255
 
-        label_path = (self.dir / "frames_txt" / self.files[file_idx].stem).with_suffix(".txt")
+        label_path = (self.dir / "frames_txt" / self.files[file_idx].name).with_suffix(".txt")
         labels = []
         # Filter labels in block.
         for label in OistDataset.read_label(label_path):
@@ -145,7 +145,7 @@ class OistDataset(BeeSeeDataset):
     @staticmethod
     def draw_label(shape, labels):
         """
-        shape: Label shape (i.e. x_img.shape).
+        shape: Label image shape (i.e. x_img.shape).
         labels: List of (x, y, angle) tuples, relative to this patch.
         return: float, 0-1
         """
@@ -185,6 +185,72 @@ class ThoraxDataset(BeeSeeDataset):
         y = read_image(str(self.dir / f"{self.indices[idx]}_label.jpg")).float() / 255
         x, y = self.apply_transforms(x, y)
         return x, y
+
+
+class VarroaDataset(BeeSeeDataset):
+    """
+    Varroa destructor dataset.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        assert (self.dir / "images").is_dir()
+        assert (self.dir / "labels").is_dir()
+
+        self.files = list((self.dir / "images").iterdir())
+        self.files = [f for f in self.files if f.suffix in (".jpg", ".png")]
+
+    def __len__(self):
+        return len(self.files)
+
+    def __getitem__(self, idx):
+        """
+        x: Image of bee.
+        y: Image of location of varroa, if exists.
+        """
+        x_img = read_image(str(self.files[idx])).float() / 255
+        x_img = torch.mean(x_img, dim=0, keepdim=True)
+
+        label_path = (self.dir / "labels" / self.files[idx].name).with_suffix(".txt")
+        labels = []
+        with open(label_path, "r") as f:
+            for line in f:
+                label = list(map(float, line.split()))[1:]
+                labels.append(label)
+        labels = np.array(labels)
+
+        y_img = VarroaDataset.draw_label(x_img.shape, labels)
+
+        x_img, y_img = self.apply_transforms(x_img, y_img)
+        return x_img, y_img
+
+    @staticmethod
+    def draw_label(shape, labels):
+        """
+        shape: Label image shape (i.e. x_img.shape).
+        labels: Tensor shape (N, 4). Each label is (x, y, w, h) in YOLOv5 format.
+            x, y is center. w, h, is width, height.
+            0-1, factor of image size.
+        return: float, 0-1
+        """
+        y_img = np.zeros((shape[1], shape[2], 1), dtype=np.uint8)
+
+        if len(labels) > 0:
+            labels[:, 0] -= labels[:, 2] / 2
+            labels[:, 1] -= labels[:, 3] / 2
+            labels[:, 0] *= shape[2]
+            labels[:, 1] *= shape[1]
+            labels[:, 2] *= shape[2]
+            labels[:, 3] *= shape[1]
+            labels = labels.astype(int)
+
+            for x, y, w, h in labels:
+                cv2.rectangle(y_img, (x, y), (x + w, y + h), 255, -1)
+
+        y_img = torch.from_numpy(y_img).permute(2, 0, 1)
+        y_img = y_img.float() / 255
+        return y_img
 
 
 if __name__ == "__main__":

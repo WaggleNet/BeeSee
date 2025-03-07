@@ -88,7 +88,7 @@ def main():
     parser.add_argument("--model_type", type=str, choices=MODEL_CHOICES, required=True)
     parser.add_argument("--logdir", type=Path, required=True, help="Path to tensorboard logs.")
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--epochs", type=int, default=5)
+    parser.add_argument("--epochs", type=int, default=25)
     parser.add_argument("--lr", type=float, default=1e-4)
     args = parser.parse_args()
 
