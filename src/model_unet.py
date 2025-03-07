@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 # Base channels in conv layers.
-CHANNELS = 32
+CHANNELS = 16
 
 
 class ReducedUNet(nn.Module):

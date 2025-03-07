@@ -30,6 +30,7 @@ def train(args, dataset, model):
     train_step = 0
 
     for epoch in range(args.epochs):
+        model.train()
         for x, y in (pbar := tqdm(train_loader)):
             x = x.to(DEVICE)
             y = y.to(DEVICE)
@@ -45,6 +46,7 @@ def train(args, dataset, model):
             train_step += 1
 
         with torch.no_grad():
+            model.eval()
             total_loss = 0
             for x, y in (pbar := tqdm(test_loader)):
                 x = x.to(DEVICE)
@@ -81,17 +83,17 @@ def write_train_params(args, model):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, required=True, help="Path to the dataset directory.")
-    parser.add_argument("--data_type", type=str, choices=["oist"], required=True)
+    parser.add_argument("--data_type", type=str, choices=DATA_CHOICES, required=True)
     parser.add_argument("--resume", type=Path, help="Model file to resume from.")
-    parser.add_argument("--model_type", type=str, choices=["unet"], required=True)
+    parser.add_argument("--model_type", type=str, choices=MODEL_CHOICES, required=True)
     parser.add_argument("--logdir", type=Path, required=True, help="Path to tensorboard logs.")
-    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--lr", type=float, default=1e-4)
     args = parser.parse_args()
 
-    dataset_cls, model_cls = get_dataset_model(args.data_type, args.model_type)
-    dataset = dataset_cls(args.data)
+    dataset_cls, model_cls, dataset_args = get_dataset_model(args.data_type, args.model_type)
+    dataset = dataset_cls(dir=args.data, **dataset_args)
     model = model_cls().to(DEVICE)
 
     write_train_params(args, model)

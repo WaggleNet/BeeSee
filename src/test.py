@@ -12,13 +12,13 @@ from utils import *
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, required=True)
-    parser.add_argument("--data_type", type=str, choices=["oist"], required=True)
+    parser.add_argument("--data_type", type=str, choices=DATA_CHOICES, required=True)
     parser.add_argument("--model", type=Path, required=True)
-    parser.add_argument("--model_type", type=str, choices=["unet"], required=True)
+    parser.add_argument("--model_type", type=str, choices=MODEL_CHOICES, required=True)
     args = parser.parse_args()
 
-    dataset_cls, model_cls = get_dataset_model(args.data_type, args.model_type)
-    dataset = dataset_cls(args.data)
+    dataset_cls, model_cls, dataset_args = get_dataset_model(args.data_type, args.model_type)
+    dataset = dataset_cls(dir=args.data, **dataset_args)
     model = model_cls().to(DEVICE)
     model.load_state_dict(torch.load(args.model, map_location=DEVICE))
     model.eval()

@@ -7,7 +7,7 @@ import torch.nn as nn
 
 
 class DinoNN(nn.Module):
-    def __init__(self, num_hidden_layers=1):
+    def __init__(self, num_hidden_layers=2):
         """
         num_hidden_layers: Number of hidden layers to use from DINO.
         """
@@ -32,14 +32,15 @@ class DinoNN(nn.Module):
 
     def forward(self, x, logits=False):
         """
-        x: (B, C, H, W), float 0-1.
+        x: (B, 1, H, W), float 0-1.
         return: (B, 1, H, W), float 0-1.
         """
         with torch.no_grad():
-            layers = self.dino.get_intermediate_layers(x, n=self.num_hidden_layers, reshape=True)
-            layers = torch.cat(layers, dim=1)
+            x = torch.cat([x, x, x], dim=1)
+            x = self.dino.get_intermediate_layers(x, n=self.num_hidden_layers, reshape=True)
+            x = torch.cat(x, dim=1)
 
-        layers = self.head(layers)
+        x = self.head(x)
         if not logits:
-            layers = self.sigmoid(layers)
-        return layers
+            x = self.sigmoid(x)
+        return x

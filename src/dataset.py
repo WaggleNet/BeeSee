@@ -29,10 +29,11 @@ class BeeSeeDataset(Dataset):
             Label semantic meaning is dataset-specific, e.g. bee or thorax position.
     """
 
-    def __init__(self, dir, output_res):
+    def __init__(self, dir, output_res=448, y_patches=False, **kwargs):
         """
         dir: Path to dataset directory.
         output_res: Resolution of output x and y image.
+        y_patches: If True, y image is scaled down by 14x (used for DINO and other ViT).
         """
         self.dir = dir
         self.output_res = output_res
@@ -47,9 +48,10 @@ class BeeSeeDataset(Dataset):
         self.trans_x = T.Compose([
             T.RandomAdjustSharpness(0.7),
         ])
-        self.trans_y = T.Compose([
-            T.ElasticTransform(25.0),
-        ])
+        trans_y = [T.ElasticTransform(25.0)]
+        if y_patches:
+            trans_y.append(T.Resize((self.output_res // 14, self.output_res // 14)))
+        self.trans_y = T.Compose(trans_y)
 
     def apply_transforms(self, x, y):
         x_ch = x.shape[0]
@@ -85,8 +87,8 @@ class OistDataset(BeeSeeDataset):
         for y in range(2, 4):
             VALID_BLOCKS.append((x, y))
 
-    def __init__(self, dir, output_res=448):
-        super().__init__(dir, output_res)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         assert (self.dir / "frames").is_dir()
         assert (self.dir / "frames_txt").is_dir()
@@ -162,8 +164,9 @@ class ThoraxDataset(BeeSeeDataset):
     Iterates the HoneyBee dataset with thorax annotations.
     """
 
-    def __init__(self, dir, output_res=448):
-        super().__init__(dir, output_res)
+    def __init__(self, duplicity=10, **kwargs):
+        super().__init__(**kwargs)
+        self.duplicity = duplicity
 
         self.indices = set()
         for f in self.dir.iterdir():
@@ -172,10 +175,13 @@ class ThoraxDataset(BeeSeeDataset):
         self.indices = list(self.indices)
 
     def __len__(self):
-        return len(self.indices)
+        return len(self.indices) * self.duplicity
     
     def __getitem__(self, idx):
+        assert 0 <= idx < len(self)
+        idx = idx % len(self.indices)
         x = read_image(str(self.dir / f"{self.indices[idx]}_img.jpg")).float() / 255
+        x = torch.mean(x, dim=0, keepdim=True)  # Convert to grayscale.
         y = read_image(str(self.dir / f"{self.indices[idx]}_label.jpg")).float() / 255
         x, y = self.apply_transforms(x, y)
         return x, y
@@ -188,11 +194,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, required=True)
-    parser.add_argument("--data_type", choices=["oist"], required=True)
+    parser.add_argument("--data_type", choices=DATA_CHOICES, required=True)
     args = parser.parse_args()
 
-    dataset_cls, _ = get_dataset_model(args.data_type, None)
-    dataset = dataset_cls(args.data)
+    dataset_cls, _, dataset_args = get_dataset_model(args.data_type, None)
+    dataset = dataset_cls(dir=args.data, **dataset_args)
 
     # Draw 3 by 6 plot of X Y samples.
     indices = random.sample(range(len(dataset)), 6)
