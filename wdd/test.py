@@ -10,6 +10,13 @@ import numpy as np
 from data import WDDDataset
 
 
+def show_sample(imgs):
+    for img in imgs:
+        plt.clf()
+        plt.imshow(img)
+        plt.pause(0.1)
+
+
 def plot_changing_dft(imgs):
     """
     Each time series is single pixel over time, i.e. imgs[:, i, j]
@@ -22,15 +29,16 @@ def plot_changing_dft(imgs):
     freq = 2 * math.pi / imgs.shape[2]
     x = np.arange(imgs.shape[2])
     while freq <= math.pi:
-        magnitude = np.sum(np.hypot(
-            np.cos(freq * x) * imgs,
-            np.sin(freq * x) * imgs,
-        ), axis=2)
+        magnitude = np.hypot(
+            (imgs * np.cos(freq * x)).mean(axis=2),
+            (imgs * np.sin(freq * x)).mean(axis=2),
+        )
 
         plt.clf()
         plt.imshow(magnitude)
         plt.title(f"Frequency: {freq:.2f}")
         plt.pause(0.5)
+        #plt.show()
 
         freq *= 1.1
 
@@ -48,6 +56,10 @@ def main():
     imgs = dataset[i]
     print(f"Shape: {imgs.shape}")
 
+    #print("Showing sample.")
+    #show_sample(imgs)
+
+    print("Plotting changing DFT.")
     plot_changing_dft(imgs)
 
 
