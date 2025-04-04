@@ -21,7 +21,7 @@ def show_sample(imgs):
         plt.pause(0.1)
 
 
-def compute_dft(imgs, freq):
+def compute_dft(imgs, freq=0.75):
     x = np.arange(imgs.shape[2])
     magnitude = np.hypot(
         (imgs * np.cos(freq * x)).mean(axis=2),

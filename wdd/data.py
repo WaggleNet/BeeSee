@@ -29,3 +29,17 @@ class WDDDataset:
         imgs = imgs.astype(np.float32) / 255.0
 
         return imgs
+
+
+class WDDExistsDataset(WDDDataset):
+    """
+    Generate positive and negative samples of whether a video contains a waggle dance.
+    """
+
+    def __getitem__(self, index) -> tuple[np.ndarray, bool]:
+        """
+        Returns (video, waggle_dance?)
+            video is same format as superclass.
+        """
+        imgs = super()[index]
+        return imgs, True

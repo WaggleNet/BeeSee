@@ -13,7 +13,7 @@ import scipy
 from perpixel_dft import get_sample, compute_dft
 
 
-def compute_spatial_dft(img, freq_max, bins):
+def compute_spatial_dft(img, freq_max=math.pi/2, bins=50):
     # Normalize data
     img -= img.mean()
     img /= img.std()
@@ -42,14 +42,13 @@ def compute_spatial_dft(img, freq_max, bins):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, required=True)
-    parser.add_argument("--freq_time", type=float, default=0.75)
-    parser.add_argument("--freq_space_max", type=float, default=math.pi / 2)
-    parser.add_argument("--freq_space_bins", type=int, default=50)
+    parser.add_argument("--freq_max", type=float, default=math.pi / 2)
+    parser.add_argument("--freq_bins", type=int, default=50)
     args = parser.parse_args()
 
     imgs = get_sample(args.data)
-    dft = compute_dft(imgs, args.freq_time)
-    spatial_dft = compute_spatial_dft(dft, args.freq_space_max, args.freq_space_bins)
+    dft = compute_dft(imgs)
+    spatial_dft = compute_spatial_dft(dft, args.freq_max, args.freq_bins)
 
     fig, ax = plt.subplots(1, 2)
     ax[0].imshow(dft)
