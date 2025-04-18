@@ -5,5 +5,4 @@
 datasets/
 runs/
 
-!**/examples/**
-!**/results/**
+!assets/**
