@@ -92,6 +92,8 @@ def main():
     parser.add_argument("--lr", type=float, default=1e-4)
     args = parser.parse_args()
 
+    print("Using device:", DEVICE)
+
     dataset_cls, model_cls, dataset_args = get_dataset_model(args.data_type, args.model_type)
     dataset = dataset_cls(dir=args.data, **dataset_args)
     model = model_cls().to(DEVICE)

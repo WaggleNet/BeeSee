@@ -2,10 +2,14 @@
 
 Bee detection neural network.
 
-## Codebase
+## Installation
 
-The `src/` directory contains training and inference code for both the
-UNet (described in OIST's paper) and DINOv2.
+```bash
+pip install -r requirements.txt
+```
 
-It is a refactor and combination of two previously separate directories
-in this repository.
+Then, obtain a model file and import appropriate functions from the code.
+
+## BeeSee usage
+
+See `src/test_thorax.py`.

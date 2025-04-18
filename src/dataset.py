@@ -39,8 +39,8 @@ class BeeSeeDataset(Dataset):
         self.output_res = output_res
 
         self.trans_both = T.Compose([
-            T.Resize((self.output_res, self.output_res)),
-            T.RandomResizedCrop(self.output_res, scale=(0.6, 1)),
+            T.Resize((self.output_res, self.output_res), antialias=True),
+            T.RandomResizedCrop(self.output_res, scale=(0.6, 1), antialias=True),
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
             T.RandomRotation(degrees=360),
@@ -50,7 +50,7 @@ class BeeSeeDataset(Dataset):
         ])
         trans_y = [T.ElasticTransform(25.0)]
         if y_patches:
-            trans_y.append(T.Resize((self.output_res // 14, self.output_res // 14)))
+            trans_y.append(T.Resize((self.output_res // 14, self.output_res // 14), antialias=True))
         self.trans_y = T.Compose(trans_y)
 
     def apply_transforms(self, x, y):
