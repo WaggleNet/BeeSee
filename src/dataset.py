@@ -4,14 +4,16 @@ Datasets specific to HoneyBee, OIST, or other extend from the base class.
 """
 
 import math
+import random
 from pathlib import Path
 
 import cv2
 import numpy as np
 
 import torch
+import torchvision.transforms as T
+import torchvision.transforms.functional as TF
 from torch.utils.data import Dataset
-from torchvision import transforms as T
 from torchvision.io import read_image
 
 from utils import *
@@ -182,9 +184,39 @@ class ThoraxDataset(BeeSeeDataset):
         idx = idx % len(self.indices)
         x = read_image(str(self.dir / f"{self.indices[idx]}_img.jpg")).float() / 255
         x = torch.mean(x, dim=0, keepdim=True)  # Convert to grayscale.
+        if random.random() < 0.7:
+            x = self.bg_aug(x)
         y = read_image(str(self.dir / f"{self.indices[idx]}_label.jpg")).float() / 255
         x, y = self.apply_transforms(x, y)
         return x, y
+
+    def bg_aug(self, x):
+        """
+        Augment background (images have only white background).
+        Randomly set background to another color.
+        Add noise to background.
+        """
+        # Detect background.
+        bg = torch.zeros_like(x)
+        bg[x > 0.7] = 1
+        for _ in range(3):
+            bg = TF.gaussian_blur(bg, kernel_size=5)
+        bg = bg > 0.99
+
+        # Make random bg image.
+        bg_image = torch.full_like(x, random.uniform(0, 1))
+        bg_image += torch.randn_like(bg_image) * 0.1
+        # Lower frequency noise.
+        noise = torch.randn(x.shape[0], x.shape[1] // 32, x.shape[2] // 32)
+        noise = TF.resize(noise, (x.shape[1], x.shape[2]), antialias=True)
+        bg_image += noise * 0.2
+
+        bg_image = bg_image.clamp(0, 1)
+
+        # Mix.
+        x[bg] = bg_image[bg]
+
+        return x
 
 
 class VarroaDataset(BeeSeeDataset):
