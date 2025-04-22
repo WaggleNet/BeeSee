@@ -7,13 +7,10 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 import argparse
-from pathlib import Path
 
 import cv2
 import torch
 import torchvision.transforms.functional as F
-from torchvision.io import read_image
-from tqdm import tqdm
 
 from model_dino import DinoNN
 from utils import DEVICE, extract_blobs
@@ -22,28 +19,21 @@ from utils import DEVICE, extract_blobs
 @torch.no_grad()
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--video", type=Path, required=True)
-    parser.add_argument("--model", type=Path, required=True)
-    parser.add_argument("--step", type=int, default=4)
+    parser.add_argument("--video", type=str, help="Omit to use camera.")
+    parser.add_argument("--model", required=True)
     args = parser.parse_args()
 
     model = DinoNN().to(DEVICE)
     model.load_state_dict(torch.load(args.model, map_location=DEVICE))
     model.eval()
 
-    video_read = cv2.VideoCapture(str(args.video))
-    video_write = cv2.VideoWriter(
-        "test_thorax.mp4",
-        cv2.VideoWriter_fourcc(*"mp4v"),
-        video_read.get(cv2.CAP_PROP_FPS),
-        (int(video_read.get(cv2.CAP_PROP_FRAME_WIDTH)), int(video_read.get(cv2.CAP_PROP_FRAME_HEIGHT))),
-    )
+    vid_path = 0 if args.video is None else args.video
+    video_read = cv2.VideoCapture(vid_path)
+    if vid_path == 0:
+        video_read.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
-    pbar = tqdm(total=int(video_read.get(cv2.CAP_PROP_FRAME_COUNT) / args.step))
-    i = 0
     while True:
-        for _ in range(args.step):
-            ret, frame = video_read.read()
+        ret, frame = video_read.read()
         if not ret:
             break
 
@@ -67,19 +57,26 @@ def main():
 
         frame = frame.squeeze(0).permute(1, 2, 0).cpu().numpy()
         frame = (frame * 255).astype("uint8")
-        frame[pred > 0.5] = 255
-
         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-        video_write.write(frame)
 
-        cv2.imwrite(f"{i}.jpg", frame)
-        i += 1
+        frame[pred > 0.5] = (0, 255, 0)
 
-        pbar.update(1)
+        """
+        blobs = extract_blobs(pred, 0.5)
+        print(f"Found {len(blobs)} blobs: ", end="")
+        for b in blobs:
+            # Extract COM
+            y, x = torch.where(b)
+            com = (x.float().mean(), y.float().mean())
+            print(f"{com} ", end="")
+        print()
+        """
 
-    pbar.close()
+        cv2.imshow("a", frame)
+        if cv2.waitKey(1) == ord("q"):
+            break
+
     video_read.release()
-    video_write.release()
 
 
 if __name__ == "__main__":
