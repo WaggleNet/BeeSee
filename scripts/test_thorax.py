@@ -13,7 +13,7 @@ import torch
 import torchvision.transforms.functional as F
 
 from model_dino import DinoNN
-from utils import DEVICE, extract_blobs
+from utils import DEVICE, extract_blobs, load_dino_model, preprocess_images
 
 
 @torch.no_grad()
@@ -23,9 +23,7 @@ def main():
     parser.add_argument("--model", required=True)
     args = parser.parse_args()
 
-    model = DinoNN().to(DEVICE)
-    model.load_state_dict(torch.load(args.model, map_location=DEVICE))
-    model.eval()
+    model = load_dino_model(args.model)
 
     vid_path = 0 if args.video is None else args.video
     video_read = cv2.VideoCapture(vid_path)
@@ -43,17 +41,12 @@ def main():
         x_extra = (frame.shape[1] - frame.shape[0]) // 2
         frame = frame[:, x_extra:-x_extra, :]
 
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame = torch.from_numpy(frame).to(DEVICE)
-        frame = frame.float() / 255.0
-        frame = frame.permute(2, 0, 1)
-        frame = frame.mean(dim=0, keepdim=True)
-        frame = frame.unsqueeze(0)
-        frame = F.resize(frame, (448, 448), antialias=True)
+        frame = preprocess_images(frame)
 
         pred = model(frame).squeeze(0)
         pred = F.resize(pred, (frame.shape[2], frame.shape[3]), antialias=True)
         pred = pred.squeeze(0)
+        # pred: (H, W)
 
         frame = frame.squeeze(0).permute(1, 2, 0).cpu().numpy()
         frame = (frame * 255).astype("uint8")

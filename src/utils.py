@@ -22,6 +22,8 @@ def get_dataset_model(data_type, model_type):
     Returns dataset and model class based on args.data_type and args.model_type.
     If either is None, the respective return value is None.
 
+    This function is used in train.py and test.py for conciseness.
+
     Return: dataset_cls, model_cls, dataset_kwargs
     """
     from dataset import OistDataset, ThoraxDataset, VarroaDataset
@@ -94,3 +96,31 @@ def extract_blobs(pred, threshold=0.5, blur=0) -> list[torch.Tensor]:
         blobs.append(blob)
 
     return blobs
+
+
+def load_dino_model(path):
+    """
+    Load an instance of DinoNN.
+    """
+    from model_dino import DinoNN
+    model = DinoNN().to(DEVICE)
+    model.load_state_dict(torch.load(path, map_location=DEVICE))
+    model.eval()
+    return model
+
+
+def preprocess_images(*imgs, res=448):
+    """
+    Preprocess and stack images along batch dimension.
+    Used for integration with cv2.
+    Assumes each image is (H, W, C) uint8 [0, 255] ndarray.
+    Returns (B, C, H, W) float32 [0, 1] tensor.
+    """
+    from torchvision.transforms import functional as F
+
+    imgs = [torch.from_numpy(img) for img in imgs]
+    imgs = [img.to(DEVICE).float() / 255.0 for img in imgs]
+    imgs = torch.stack(imgs).permute(0, 3, 1, 2)
+    imgs = imgs.mean(dim=1, keepdim=True)
+    imgs = F.resize(imgs, (res, res), antialias=True)
+    return imgs

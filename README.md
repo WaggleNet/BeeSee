@@ -12,4 +12,6 @@ Then, obtain a model file and import appropriate functions from the code.
 
 ## BeeSee usage
 
-See `src/test_thorax.py`.
+See `scripts/thorax_example.py`.
+
+There are some functions in `utils.py` which may be convenient.
