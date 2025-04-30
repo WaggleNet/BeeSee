@@ -1,7 +1,15 @@
 # laptop_tcp_recv.py
+import argparse
 import socket, struct
 import cv2
 import numpy as np
+
+from test_thorax import run_thorax_model, load_dino_model
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--model", required=True)
+args = parser.parse_args()
+
 
 HOST = ''       # listen on all interfaces
 PORT = 5555     # must match the Pi
@@ -19,6 +27,8 @@ print(f"[Laptop] Connection from {addr}")
 
 data = b''
 payload_size = struct.calcsize(">L")
+
+dino_model = load_dino_model(args.model)
 
 # Read, decode, show loop
 while True:
@@ -48,7 +58,8 @@ while True:
         cv2.IMREAD_COLOR
     )
 
-    
+    frame, pred = run_thorax_model(dino_model, frame)
+    frame[pred] = (0, 255, 0)
 
     cv2.imshow("Pi → Laptop Stream", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
