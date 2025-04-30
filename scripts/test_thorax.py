@@ -9,11 +9,40 @@ sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 import argparse
 
 import cv2
+import numpy as np
 import torch
 import torchvision.transforms.functional as F
 
 from model_dino import DinoNN
 from utils import DEVICE, extract_blobs, load_dino_model, preprocess_images
+
+
+def run_model(model, frame):
+    """
+    Run thorax detection on cv2 image (np array, HWC, uint8).
+
+    return (frame, pred)
+        frame is the cropped cv2 image.
+        pred is detected mask (H, W)
+    """
+    # Crop to square
+    if frame.shape[0] > frame.shape[1]:
+        frame = frame.swapaxes(0, 1)
+    x_extra = (frame.shape[1] - frame.shape[0]) // 2
+    frame = frame[:, x_extra:-x_extra, :]
+    cropped_frame = frame
+
+    frame = preprocess_images(frame)
+
+    pred = model(frame).squeeze(0)
+    pred = F.resize(pred, (frame.shape[2], frame.shape[3]), antialias=True)
+    pred = pred.squeeze(0)
+    pred = pred > 0.5
+    pred = pred.cpu().numpy()
+    pred = pred.astype(int)
+    # pred: (H, W), int, np array
+
+    return cropped_frame, pred
 
 
 @torch.no_grad()
@@ -35,24 +64,8 @@ def main():
         if not ret:
             break
 
-        # Crop to square
-        if frame.shape[0] > frame.shape[1]:
-            frame = frame.swapaxes(0, 1)
-        x_extra = (frame.shape[1] - frame.shape[0]) // 2
-        frame = frame[:, x_extra:-x_extra, :]
-
-        frame = preprocess_images(frame)
-
-        pred = model(frame).squeeze(0)
-        pred = F.resize(pred, (frame.shape[2], frame.shape[3]), antialias=True)
-        pred = pred.squeeze(0)
-        # pred: (H, W)
-
-        frame = frame.squeeze(0).permute(1, 2, 0).cpu().numpy()
-        frame = (frame * 255).astype("uint8")
-        frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-
-        frame[pred > 0.5] = (0, 255, 0)
+        frame, pred = run_model(model, frame)
+        frame[pred] = (0, 255, 0)
 
         """
         blobs = extract_blobs(pred, 0.5)
