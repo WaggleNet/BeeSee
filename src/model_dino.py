@@ -71,7 +71,7 @@ if __name__ == "__main__":
     iters = 0
     while True:
         with torch.no_grad():
-            model(img)
+            pred = model(img)
 
         iters += 1
         if iters >= 2 and time.time() - time_start > 5:
@@ -83,3 +83,10 @@ if __name__ == "__main__":
     print(f"  elapse: {elapse:.2f}s")
     print(f"  elapse_per: {elapse / iters:.3f}s")
     print(f"  fps: {iters / elapse:.3f}")
+
+    # Make and save prediction.
+    img = cv2.imread(args.img)
+    pred = pred.detach().cpu().numpy()[0, 0]
+    pred = cv2.resize(pred, (img.shape[1], img.shape[0]))
+    img[pred > 0.5] = (0, 255, 0)
+    cv2.imwrite("dino_perft_pred.jpg", img)
