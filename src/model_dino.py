@@ -51,8 +51,6 @@ class DinoNN(nn.Module):
 
 
 if __name__ == "__main__":
-    torch.set_grad_enabled(False)
-
     # Benchmark model performance.
     import cv2
     import time
@@ -70,8 +68,18 @@ if __name__ == "__main__":
     img = img.unsqueeze(0).to(DEVICE)
 
     time_start = time.time()
-    for _ in range(30):
-        model(img)
-    elapse = time.time() - time_start
+    iters = 0
+    while True:
+        with torch.no_grad():
+            model(img)
 
-    print(f"30 iters, time per iter = {elapse / 30:.3f}s, FPS = {30 / elapse:.1f}")
+        iters += 1
+        if iters >= 2 and time.time() - time_start > 5:
+            break
+
+    elapse = time.time() - time_start
+    print(f"DINO performance test:")
+    print(f"  iters: {iters}")
+    print(f"  elapse: {elapse:.2f}s")
+    print(f"  elapse_per: {elapse / iters:.3f}s")
+    print(f"  fps: {iters / elapse:.3f}")
