@@ -62,20 +62,21 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     model = load_dino_model(args.model)
+    model.eval()
     img = cv2.imread(args.img)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)[..., None]
     img = preprocess_images(img, res=448)[0]
     img = img.unsqueeze(0).to(DEVICE)
 
-    time_start = time.time()
-    iters = 0
-    while True:
-        with torch.no_grad():
+    with torch.no_grad():
+        time_start = time.time()
+        iters = 0
+        while True:
             pred = model(img)
 
-        iters += 1
-        if iters >= 2 and time.time() - time_start > 5:
-            break
+            iters += 1
+            if iters >= 2 and time.time() - time_start > 5:
+                break
 
     elapse = time.time() - time_start
     print(f"DINO performance test:")
