@@ -22,17 +22,7 @@ class DinoNN(nn.Module):
 
         self.num_hidden_layers = num_hidden_layers
 
-        self.head = nn.Sequential(
-            nn.Conv2d(384 * self.num_hidden_layers, 256, 3, padding=1),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(inplace=True),
-
-            nn.Conv2d(256, 64, 3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(inplace=True),
-
-            nn.Conv2d(64, 1, 1),
-        )
+        self.head = nn.Conv2d(384 * self.num_hidden_layers, 1, 1)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x, logits=False):
@@ -66,7 +56,7 @@ if __name__ == "__main__":
     model.eval()
     img = cv2.imread(args.img)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)[..., None]
-    img = preprocess_images(img, res=448)[0]
+    img = preprocess_images(img, res=224)[0]
     img = img.unsqueeze(0).to(DEVICE)
 
     with torch.no_grad():

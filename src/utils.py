@@ -109,7 +109,7 @@ def load_dino_model(path):
     return model
 
 
-def preprocess_images(*imgs, res=448):
+def preprocess_images(*imgs, res=224):
     """
     Preprocess and stack images along batch dimension.
     Used for integration with cv2.

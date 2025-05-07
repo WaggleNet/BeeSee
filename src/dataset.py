@@ -31,7 +31,7 @@ class BeeSeeDataset(Dataset):
             Label semantic meaning is dataset-specific, e.g. bee or thorax position.
     """
 
-    def __init__(self, dir, output_res=448, y_patches=False, **kwargs):
+    def __init__(self, dir, output_res=224, y_patches=False, **kwargs):
         """
         dir: Path to dataset directory.
         output_res: Resolution of output x and y image.
