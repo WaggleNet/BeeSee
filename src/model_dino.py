@@ -1,6 +1,8 @@
 """
-DINO, then hidden layers to a conv head.
+DINO, then conv head taking in hidden layers.
 """
+
+import argparse
 
 import torch
 import torch.nn as nn
@@ -46,3 +48,30 @@ class DinoNN(nn.Module):
         if not logits:
             x = self.sigmoid(x)
         return x
+
+
+if __name__ == "__main__":
+    torch.set_grad_enabled(False)
+
+    # Benchmark model performance.
+    import cv2
+    import time
+    from utils import load_dino_model, preprocess_images
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model", required=True)
+    parser.add_argument("--img", required=True)
+    args = parser.parse_args()
+
+    model = load_dino_model(args.model)
+    img = cv2.imread(args.img)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)[..., None]
+    img = preprocess_images(img, res=448)[0]
+    img = img.unsqueeze(0).to(DEVICE)
+
+    time_start = time.time()
+    for _ in range(30):
+        model(img)
+    elapse = time.time() - time_start
+
+    print(f"30 iters, time per iter = {elapse / 30:.3f}s, FPS = {30 / elapse:.1f}")
