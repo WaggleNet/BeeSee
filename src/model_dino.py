@@ -10,6 +10,7 @@ import torch.nn as nn
 from utils import DEVICE
 
 DINO = torch.hub.load("facebookresearch/dinov2", "dinov2_vits14_reg").to(DEVICE)
+DINO.eval()
 
 
 class DinoNN(nn.Module):
