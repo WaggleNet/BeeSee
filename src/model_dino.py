@@ -2,12 +2,44 @@
 DINO, then conv head taking in hidden layers.
 """
 
+from pathlib import Path
+
 import torch
 import torch.nn as nn
+from torch.quantization import quantize_dynamic, quantize_fx
+from torchvision.transforms import functional as F
+from torchvision.io import read_image
 
 from utils import DEVICE
 
+ROOT = Path(__file__).parent
+
+
+def apply_fx_quant(model):
+    # Load calibration data.
+    data_path = ROOT.parent / "datasets" / "thorax"
+    data = []
+    with torch.inference_mode():
+        for file in data_path.iterdir():
+            if file.suffix == ".jpg" and "img" in file.name:
+                img = read_image(str(file)).to(DEVICE).float() / 255.0
+                img = F.resize(img, [224, 224])
+                img = img.unsqueeze(0)
+                data.append(img)
+
+    qconfig = {"": torch.quantization.get_default_qconfig("fbgemm")}
+    model = quantize_fx.prepare_fx(model, qconfig, example_inputs=(data[0],))
+    with torch.inference_mode():
+        for img in data:
+            model(img)
+    model = quantize_fx.convert_fx(model)
+
+    return model
+
+
 DINO = torch.hub.load("facebookresearch/dinov2", "dinov2_vits14_reg").to(DEVICE)
+#DINO = quantize_model(DINO)
+#DINO = apply_fx_quant(DINO, {nn.Linear}, dtype=torch.qint8)
 DINO.eval()
 
 

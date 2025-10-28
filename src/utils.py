@@ -70,6 +70,7 @@ def extract_blobs(pred, threshold=0.5, blur=0) -> list[torch.Tensor]:
         list of (H, W) bool tensors, each one a unique contiguous region.
             Obtaining size of blob and mean coordinates is trivial.
     """
+    pred = torch.tensor(pred)
     pred = pred.clone()
     if blur > 0:
         pred = torch.nn.functional.gaussian_blur(pred, kernel_size=blur)
