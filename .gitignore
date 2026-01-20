@@ -6,3 +6,5 @@ datasets/
 runs/
 
 !assets/**
+
+docs/_build
