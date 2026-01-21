@@ -1,17 +1,9 @@
-.. WaggleNet BeeSee documentation master file, created by
-   sphinx-quickstart on Tue Jan 20 17:55:11 2026.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-WaggleNet BeeSee documentation
-==============================
-
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
-
+BeeSee
+======
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: BeeSee
+   :hidden:
 
+   dino.rst
