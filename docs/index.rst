@@ -6,4 +6,6 @@ BeeSee
    :caption: BeeSee
    :hidden:
 
+   usage.rst
+   codebase.rst
    dino.rst
